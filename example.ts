@@ -31,8 +31,8 @@ const bobsClasses = await classStudents.getMany<Class>(bob);
 console.log(bobsClasses);
 /*
 [
-  { key: "...", versionstamp: "...", value: { name: "Maths" }, relationalValue: { status: "absent" } },
   { key: "...", versionstamp: "...", value: { name: "Biology" }, relationalValue: { status: "present" } },
+  { key: "...", versionstamp: "...", value: { name: "Maths" }, relationalValue: { status: "absent" } },
 ]
 */
 
