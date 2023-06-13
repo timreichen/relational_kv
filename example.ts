@@ -27,7 +27,7 @@ const bob = await students.add({ name: "Bob" });
 await classStudents.set(maths, bob, { status: "absent" });
 await classStudents.set(biology, bob, { status: "present" });
 
-const bobsClasses = await classStudents.getMany<Class>(bob);
+const bobsClasses = await classStudents.getAll<Class>(bob);
 console.log(bobsClasses);
 /*
 [
@@ -36,7 +36,7 @@ console.log(bobsClasses);
 ]
 */
 
-const biologyStudents = await classStudents.getMany<Student>(biology);
+const biologyStudents = await classStudents.getAll<Student>(biology);
 console.log(biologyStudents);
 /*
 [
