@@ -1,4 +1,6 @@
-import { RelationalTable, Table } from "./mod.ts";
+import { openRelationKv } from "./mod.ts";
+
+export const kv = await openRelationKv(":memory:");
 
 interface Student {
   name: string;
@@ -7,40 +9,40 @@ interface Class {
   name: string;
 }
 interface ClassStudent {
-  status: string;
+  mark: string;
 }
 
-export const kv = await Deno.openKv(":memory:");
+const alice = ["students", "alice"];
+const bob = ["students", "bob"];
+const maths = ["classes", "maths"];
+const biology = ["classes", "biology"];
 
-const students = new Table<Student>(kv, ["students"]);
-const classes = new Table<Class>(kv, ["classes"]);
-const classStudents = new RelationalTable<ClassStudent>(kv, classes, students);
+await kv.set(alice, { name: "Alice" });
+await kv.set(bob, { name: "Bob" });
 
-const maths = await classes.add({ name: "Maths" });
-const biology = await classes.add({ name: "Biology" });
+await kv.set(maths, { name: "Maths" });
+await kv.set(biology, { name: "Biology" });
 
-const alice = await students.add({ name: "Alice" });
-await classStudents.set(maths, alice, { status: "present" });
-await classStudents.set(biology, alice, { status: "late" });
+await kv.relations.set(alice, maths, { mark: "C" });
+await kv.relations.set(alice, biology, { mark: "A+" });
 
-const bob = await students.add({ name: "Bob" });
-await classStudents.set(maths, bob, { status: "absent" });
-await classStudents.set(biology, bob, { status: "present" });
+await kv.relations.set(bob, maths, { mark: "F" });
+await kv.relations.set(bob, biology, { mark: "A+" });
 
-const bobsClasses = await classStudents.getAll<Class>(bob);
-console.log(bobsClasses);
-/*
-[
-  { key: "...", versionstamp: "...", value: { name: "Biology" }, relationalValue: { status: "present" } },
-  { key: "...", versionstamp: "...", value: { name: "Maths" }, relationalValue: { status: "absent" } },
-]
-*/
+console.log("Math Students");
+for await (
+  const entry of await kv.relations.list<Student, ClassStudent>({
+    prefix: [...maths, "students"],
+  })
+) {
+  console.log("-", `${entry.value.name}:`, entry.relations.value.mark);
+}
 
-const biologyStudents = await classStudents.getAll<Student>(biology);
-console.log(biologyStudents);
-/*
-[
-  { key: "...", versionstamp: "...", value: { name: "Alice" }, relationalValue: { status: "late" } },
-  { key: "...", versionstamp: "...", value: { name: "Bob" }, relationalValue: { status: "present" } },
-]
-*/
+console.log("Bob's classes");
+for await (
+  const entry of await kv.relations.list<Class, ClassStudent>({
+    prefix: [...bob, "classes"],
+  })
+) {
+  console.log("-", `${entry.value.name}:`, entry.relations.value.mark);
+}
