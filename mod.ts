@@ -1,24 +1,26 @@
+interface Relations {
+  set<T>(
+    leftKey: Deno.KvKey,
+    rightKey: Deno.KvKey,
+    data: T,
+  ): Promise<Deno.KvCommitResult | Deno.KvCommitError>;
+  get<T, U = unknown>(
+    key: Deno.KvKey,
+  ): Promise<RelationKvEntry<T, U> | undefined>;
+  getMany<T, U = unknown>(
+    keys: Deno.KvKey[],
+  ): Promise<RelationKvEntry<T, U>[]>;
+  delete(
+    leftKey: Deno.KvKey,
+    rightKey: Deno.KvKey,
+  ): Promise<Deno.KvCommitResult | Deno.KvCommitError>;
+  list<T, U = unknown>(
+    selector: { prefix: Deno.KvKey },
+  ): AsyncGenerator<RelationKvEntry<T, U>>;
+}
+
 export interface RelationKv extends Deno.Kv {
-  relations: {
-    set<T>(
-      leftKey: Deno.KvKey,
-      rightKey: Deno.KvKey,
-      data: T,
-    ): Promise<Deno.KvCommitResult | Deno.KvCommitError>;
-    get<T, U = unknown>(
-      key: Deno.KvKey,
-    ): Promise<RelationKvEntry<T, U> | undefined>;
-    getMany<T, U = unknown>(
-      keys: Deno.KvKey[],
-    ): Promise<RelationKvEntry<T, U>[]>;
-    delete(
-      leftKey: Deno.KvKey,
-      rightKey: Deno.KvKey,
-    ): Promise<Deno.KvCommitResult | Deno.KvCommitError>;
-    list<T, U = unknown>(
-      selector: { prefix: Deno.KvKey },
-    ): AsyncGenerator<RelationKvEntry<T, U>>;
-  };
+  relations: Relations;
 }
 interface RelationValue<T> {
   value: T;
@@ -33,7 +35,7 @@ const RELATIONS = ":relations:";
 
 export async function openRelationKv(path?: string) {
   const kv = await Deno.openKv(path) as RelationKv;
-  kv.relations = {
+  const relations: Relations = {
     async set<T>(leftKey: Deno.KvKey, rightKey: Deno.KvKey, value: T) {
       const [leftEntry, rightEntry] = await kv.getMany([leftKey, rightKey]);
       const leftRelationalValue: RelationValue<T> = { key: leftKey, value };
@@ -91,5 +93,6 @@ export async function openRelationKv(path?: string) {
       }
     },
   };
+  Object.defineProperty(kv, "relations", { value: relations });
   return kv;
 }
