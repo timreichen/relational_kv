@@ -1,6 +1,10 @@
 import { openRelationKv } from "./mod.ts";
 
-export const kv = await openRelationKv(":memory:");
+async function fromAsync<T>(generator: AsyncGenerator<T, any, unknown>) {
+  const items: T[] = [];
+  for await (const item of generator) items.push(item);
+  return items;
+}
 
 interface Student {
   name: string;
@@ -11,6 +15,8 @@ interface Class {
 interface ClassStudent {
   mark: string;
 }
+
+const kv = await openRelationKv(":memory:");
 
 const alice = ["students", "alice"];
 const bob = ["students", "bob"];
@@ -29,20 +35,38 @@ await kv.relations.set(alice, biology, { mark: "A+" });
 await kv.relations.set(bob, maths, { mark: "F" });
 await kv.relations.set(bob, biology, { mark: "A+" });
 
-console.log("Math Students");
-for await (
-  const entry of await kv.relations.list<Student, ClassStudent>({
-    prefix: [...maths, "students"],
-  })
-) {
-  console.log("-", `${entry.value.name}:`, entry.relations.value.mark);
-}
+const alicesClasses = await fromAsync(
+  kv.relations.list<Class, ClassStudent>({ prefix: [...alice, "classes"] }),
+);
+console.table(
+  alicesClasses.map((entry) => ({
+    name: entry.value.name,
+    mark: entry.relations.value.mark,
+  })),
+);
+/*
+┌───────┬───────────┬──────┐
+│ (idx) │ name      │ mark │
+├───────┼───────────┼──────┤
+│     0 │ "Biology" │ "A+" │
+│     1 │ "Maths"   │ "C"  │
+└───────┴───────────┴──────┘
+*/
 
-console.log("Bob's classes");
-for await (
-  const entry of await kv.relations.list<Class, ClassStudent>({
-    prefix: [...bob, "classes"],
-  })
-) {
-  console.log("-", `${entry.value.name}:`, entry.relations.value.mark);
-}
+const mathStudents = await fromAsync(
+  kv.relations.list<Student, ClassStudent>({ prefix: [...maths, "students"] }),
+);
+console.table(
+  mathStudents.map((entry) => ({
+    name: entry.value.name,
+    mark: entry.relations.value.mark,
+  })),
+);
+/*
+┌───────┬─────────┬──────┐
+│ (idx) │ name    │ mark │
+├───────┼─────────┼──────┤
+│     0 │ "Alice" │ "C"  │
+│     1 │ "Bob"   │ "F"  │
+└───────┴─────────┴──────┘
+*/
