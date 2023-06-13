@@ -83,8 +83,7 @@ export async function openRelationKv(path?: string) {
           prefix: [RELATIONS, ...selector.prefix],
         })
       ) {
-        const referenceKey = entry.key.slice(selector.prefix.length);
-        const referenceEntry = await kv.get<T>(referenceKey);
+        const referenceEntry = await kv.get<T>(entry.value.key);
         yield {
           ...referenceEntry,
           relations: { value: entry.value.value },
