@@ -1,18 +1,17 @@
+const keySymbol = Symbol("key");
+
 export class Table<T> {
   #kv: Deno.Kv;
-  #key: Deno.KvKey;
+  [keySymbol]: Deno.KvKey;
   constructor(kv: Deno.Kv, key: Deno.KvKey) {
     this.#kv = kv;
-    this.#key = key;
-  }
-  get key() {
-    return this.#key;
+    this[keySymbol] = key;
   }
 
   async add(data: T) {
     const id = crypto.randomUUID();
     await this.set(id, data);
-    return await this.get(id);
+    return [...this[keySymbol], id];
   }
   async update(id: string, data: Partial<T>) {
     const oldData = (await this.get(id)).value as T;
@@ -20,29 +19,29 @@ export class Table<T> {
     await this.set(id, newData);
   }
   async set(id: string, data: T) {
-    await this.#kv.set([...this.key, id], data);
+    await this.#kv.set([...this[keySymbol], id], data);
   }
   async has(id: string) {
     return await this.get(id) !== undefined;
   }
   async get(id: string) {
-    return await this.#kv.get<T>([...this.key, id]);
+    return await this.#kv.get<T>([...this[keySymbol], id]);
   }
   async getAll() {
     const items: Deno.KvEntry<T>[] = [];
-    for await (const entry of this.#kv.list<T>({ prefix: this.#key })) {
+    for await (const entry of this.#kv.list<T>({ prefix: this[keySymbol] })) {
       items.push(entry);
     }
     return items;
   }
   async find(callback: (entry: Deno.KvEntry<T>) => boolean) {
-    for await (const entry of this.#kv.list<T>({ prefix: this.#key })) {
+    for await (const entry of this.#kv.list<T>({ prefix: this[keySymbol] })) {
       if (callback(entry)) return entry;
     }
   }
   async filter(callback: (entry: Deno.KvEntry<T>) => boolean) {
     const items: Deno.KvEntry<T>[] = [];
-    for await (const entry of this.#kv.list<T>({ prefix: this.#key })) {
+    for await (const entry of this.#kv.list<T>({ prefix: this[keySymbol] })) {
       if (callback(entry)) items.push(entry);
     }
     return items;
@@ -57,7 +56,9 @@ export class RelationalTable<R, LeftT = unknown, RightT = unknown> {
 
   constructor(kv: Deno.Kv, leftTable: Table<LeftT>, rightTable: Table<RightT>) {
     this.#kv = kv;
-    this.#key = [":" + [...leftTable.key, ...rightTable.key].join(":") + ":"];
+    this.#key = [
+      ":" + [...leftTable[keySymbol], ...rightTable[keySymbol]].join(":") + ":",
+    ];
   }
 
   async set(leftKey: Deno.KvKey, rightKey: Deno.KvKey, data?: R) {

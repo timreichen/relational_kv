@@ -20,14 +20,14 @@ const maths = await classes.add({ name: "Maths" });
 const biology = await classes.add({ name: "Biology" });
 
 const alice = await students.add({ name: "Alice" });
-await classStudents.set(maths.key, alice.key, { status: "present" });
-await classStudents.set(biology.key, alice.key, { status: "late" });
+await classStudents.set(maths, alice, { status: "present" });
+await classStudents.set(biology, alice, { status: "late" });
 
 const bob = await students.add({ name: "Bob" });
-await classStudents.set(maths.key, bob.key, { status: "absent" });
-await classStudents.set(biology.key, bob.key, { status: "present" });
+await classStudents.set(maths, bob, { status: "absent" });
+await classStudents.set(biology, bob, { status: "present" });
 
-const bobsClasses = await classStudents.getMany<Class>(bob.key);
+const bobsClasses = await classStudents.getMany<Class>(bob);
 console.log(bobsClasses);
 /*
 [
@@ -36,7 +36,7 @@ console.log(bobsClasses);
 ]
 */
 
-const biologyStudents = await classStudents.getMany<Student>(biology.key);
+const biologyStudents = await classStudents.getMany<Student>(biology);
 console.log(biologyStudents);
 /*
 [
