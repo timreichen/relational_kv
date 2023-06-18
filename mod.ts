@@ -2,7 +2,7 @@ interface Relations {
   set<T>(
     leftKey: Deno.KvKey,
     rightKey: Deno.KvKey,
-    data: T,
+    data?: T,
   ): Promise<Deno.KvCommitResult | Deno.KvCommitError>;
   get<T, U = unknown>(
     key: Deno.KvKey,
