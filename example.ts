@@ -82,7 +82,7 @@ console.log(composedStudent);
 */
 
 const composedLesson = await kv.composition.get(lesson1, {
-  classes: { getMany: ["classes"] },
+  class: { get: ["classes"] },
   students: { getMany: ["students"] },
 });
 console.log(composedLesson);
@@ -92,13 +92,13 @@ console.log(composedLesson);
   value: { date: "2023-01-01" },
   versionstamp: "00000000000000050000",
   composition: {
-    classes: [
-      {
-        key: [ "classes", "maths" ],
-        value: { name: "Maths" },
-        versionstamp: "00000000000000030000",
-      }
-    ],
+    class: {
+      key: [ "classes", "biology" ],
+      value: { name: "Biology" },
+      versionstamp: "00000000000000040000",
+      composition: { lessons: [] },
+      relation: { mark: "B" }
+    }
     students: [
       {
         key: [ "students", "alice" ],
