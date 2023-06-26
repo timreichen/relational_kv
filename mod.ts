@@ -1,40 +1,3 @@
-export interface RelationKvEntry<U> {
-  key: Deno.KvKey;
-  value?: U;
-}
-interface CompositionSelectorBase {
-  value?: CompositionSelector;
-  relationKey?: string;
-}
-interface CompositionGetManySelector extends CompositionSelectorBase {
-  get?: never;
-  getMany: Deno.KvKey;
-}
-interface CompositionGetSelector extends CompositionSelectorBase {
-  get: Deno.KvKey;
-  getMany?: never;
-}
-export interface CompositionSelector {
-  [K: string]: CompositionGetSelector | CompositionGetManySelector;
-}
-
-export interface CompositionKvEntry<T, C = never, R = never>
-  extends Deno.KvEntry<T> {
-  relation?: R;
-  composition: C;
-}
-
-export interface RelationAtomicOperation extends Deno.AtomicOperation {
-  relations: {
-    set<T>(
-      leftKey: Deno.KvKey,
-      rightKey: Deno.KvKey,
-      value?: T,
-    ): RelationAtomicOperation;
-    delete(leftKey: Deno.KvKey, rightKey: Deno.KvKey): RelationAtomicOperation;
-  };
-}
-
 export interface RelationKv extends Deno.Kv {
   relations: {
     /**
@@ -129,6 +92,41 @@ export interface RelationKv extends Deno.Kv {
     ): IterableIterator<Readonly<CompositionKvEntry<T, C>>>;
   };
   atomic(): RelationAtomicOperation;
+}
+export interface RelationKvEntry<U> {
+  key: Deno.KvKey;
+  value?: U;
+}
+export interface RelationAtomicOperation extends Deno.AtomicOperation {
+  relations: {
+    set<T>(
+      leftKey: Deno.KvKey,
+      rightKey: Deno.KvKey,
+      value?: T,
+    ): RelationAtomicOperation;
+    delete(leftKey: Deno.KvKey, rightKey: Deno.KvKey): RelationAtomicOperation;
+  };
+}
+
+interface CompositionSelectorBase {
+  value?: CompositionSelector;
+  relationKey?: string;
+}
+interface CompositionGetManySelector extends CompositionSelectorBase {
+  get?: never;
+  getMany: Deno.KvKey;
+}
+interface CompositionGetSelector extends CompositionSelectorBase {
+  get: Deno.KvKey;
+  getMany?: never;
+}
+export interface CompositionSelector {
+  [K: string]: CompositionGetSelector | CompositionGetManySelector;
+}
+export interface CompositionKvEntry<T, C = never, R = never>
+  extends Deno.KvEntry<T> {
+  relation?: R;
+  composition: C;
 }
 
 const RELATION_KEY = ":relations:";
