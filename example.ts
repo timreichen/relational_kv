@@ -1,6 +1,6 @@
 import { relationKv } from "./mod.ts";
 
-const kv = await relationKv(await Deno.openKv(":memory:"));
+const kv = relationKv(await Deno.openKv(":memory:"));
 
 const alice = ["students", "alice"];
 const bob = ["students", "bob"];
@@ -41,7 +41,6 @@ const composedStudent = await kv.composition.get(alice, {
     value: { lessons: { getMany: ["lessons"] } },
   },
 });
-
 console.log(composedStudent);
 /*
 {
