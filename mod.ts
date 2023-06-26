@@ -14,11 +14,15 @@ interface CompositionGetSelector extends CompositionSelectorBase {
   get: Deno.KvKey;
   getMany?: never;
 }
+export interface CompositionSelector {
+  [K: string]: CompositionGetSelector | CompositionGetManySelector;
+}
 
-export type CompositionSelector = Record<
-  string,
-  CompositionGetSelector | CompositionGetManySelector
->;
+export interface CompositionKvEntry<T, C = never, R = never>
+  extends Deno.KvEntry<T> {
+  relation?: R;
+  composition: C;
+}
 
 export interface RelationAtomicOperation extends Deno.AtomicOperation {
   relations: {
@@ -33,23 +37,96 @@ export interface RelationAtomicOperation extends Deno.AtomicOperation {
 
 export interface RelationKv extends Deno.Kv {
   relations: {
+    /**
+     * @example
+     * ```ts
+     * import { relationKv } from "./mod.ts";
+     * const kv = await relationKv(await Deno.openKv());
+     * const alice = ["students", "alice"];
+     * const maths = ["classes", "maths"];
+     * await kv.set(alice, { name: "Alice" });
+     * await kv.set(maths, { name: "Maths" });
+     * await kv.relations.set(alice, maths, { mark: "A+" });
+     * ```
+     */
     set<U>(
       leftKey: Deno.KvKey,
       rightKey: Deno.KvKey,
       value?: U,
     ): Promise<void>;
+    /**
+     * @example
+     * ```ts
+     * import { relationKv } from "./mod.ts";
+     * const kv = await relationKv(await Deno.openKv());
+     * const alice = ["students", "alice"];
+     * const maths = ["classes", "maths"];
+     * await kv.relations.delete(alice, maths);
+     * ```
+     */
     delete(leftKey: Deno.KvKey, rightKey: Deno.KvKey): Promise<void>;
+    /**
+     * @example
+     * ```ts
+     * import { relationKv } from "./mod.ts";
+     * const kv = await relationKv(await Deno.openKv());
+     * const alice = ["students", "alice"];
+     * const maths = ["classes", "maths"];
+     * await kv.set(alice, { name: "Alice" });
+     * await kv.set(maths, { name: "Maths" });
+     * await kv.relations.set(alice, maths, { mark: "A+" });
+     * const result = await kv.relations.get(alice, maths);
+     * result; // { mark: "A+" }
+     * ```
+     */
     get<U>(leftKey: Deno.KvKey, rightKey: Deno.KvKey): Promise<U | null>;
   };
   composition: {
-    get<T>(
+    /**
+     * @example
+     * ```ts
+     * import { relationKv } from "./mod.ts";
+     * const kv = await relationKv(await Deno.openKv());
+     * const alice = ["students", "alice"];
+     * const maths = ["classes", "maths"];
+     * await kv.set(alice, { name: "Alice" });
+     * await kv.set(maths, { name: "Maths" });
+     * await kv.relations.set(alice, maths, { mark: "A+" });
+     * const compositionEntry = await kv.composition.get(alice, { classes: { getMany: ["classes"] } })
+     * ```
+     */
+    get<
+      T,
+      C extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+    >(
       key: Deno.KvKey,
       compositionSelector: CompositionSelector,
-    ): Promise<T>;
-    list<T>(
+    ): Promise<Readonly<CompositionKvEntry<T, C>>>;
+    /**
+     * @example
+     * ```ts
+     * import { relationKv } from "./mod.ts";
+     * const kv = await relationKv(await Deno.openKv());
+     * const alice = ["students", "alice"];
+     * const maths = ["classes", "maths"];
+     * await kv.set(alice, { name: "Alice" });
+     * await kv.set(maths, { name: "Maths" });
+     * await kv.relations.set(alice, maths, { mark: "A+" });
+     * for await (const compositionEntry of kv.composition.list({ prefix: ["students"] }, { classes: { getMany: ["classes"] } })) {
+     *   compositionEntry.key; // ["users", "alice"]
+     *   compositionEntry.value; // { name: "Alice" }
+     *   compositionEntry.versionstamp; // "00000000000000010000"
+     *   compositionEntry.composition; // { classes: [ { key: [ "classes", "maths" ], value: { name: "Maths" }, versionstamp: "00000000000000020000", relation: { mark: "A+" } } ] }
+     * }
+     * ```
+     */
+    list<
+      T,
+      C extends Record<PropertyKey, unknown> = Record<PropertyKey, unknown>,
+    >(
       selector: Deno.KvListSelector,
       compositionSelector: CompositionSelector,
-    ): AsyncGenerator<T>;
+    ): IterableIterator<Readonly<CompositionKvEntry<T, C>>>;
   };
   atomic(): RelationAtomicOperation;
 }
@@ -92,9 +169,8 @@ async function compose<T>(
   kv: Deno.Kv,
   entry: Deno.KvEntryMaybe<T>,
   compositionSelector: CompositionSelector,
-): Promise<T> {
-  const entryValue = entry.value as any;
-  if (!entry.value) return entryValue;
+) {
+  const composition: Record<PropertyKey, unknown> = {};
 
   for (
     const [key, { get, getMany, value, relationKey = "relation" }] of Object
@@ -102,7 +178,7 @@ async function compose<T>(
         compositionSelector as CompositionSelector,
       )
   ) {
-    if (getMany) entryValue[key] = [];
+    if (getMany) composition[key] = [];
 
     for await (
       const relationEntry of kv.list<RelationKvEntry<unknown>>({
@@ -113,23 +189,33 @@ async function compose<T>(
         ],
       })
     ) {
-      const subEntry = await kv.get(relationEntry.value.key);
+      let subEntry = await kv.get(relationEntry.value.key);
       if (!subEntry.value) continue;
-      if (value) await compose(kv, subEntry, value);
-      const composedValue = {
-        value: subEntry.value,
-        [relationKey]: relationEntry.value.value,
-      };
+      if (value) subEntry = await compose(kv, subEntry, value);
+      const composedEntry = { ...subEntry } as Record<PropertyKey, unknown>;
+      const relationValue = relationEntry.value.value;
+      if (relationValue !== undefined) {
+        composedEntry[relationKey] = relationValue;
+      }
+
       if (getMany) {
-        entryValue[key].push(composedValue);
+        (composition[key] as unknown[]).push(composedEntry);
       } else {
-        entryValue[key] = composedValue;
+        composition[key] = composedEntry;
+        break;
       }
     }
   }
-  return entry.value as T;
+  return { ...entry, composition } as CompositionKvEntry<T>;
 }
 
+/**
+ * @example
+ * ```ts
+ * import { relationKv } from "./mod.ts";
+ * const kv = await relationKv(await Deno.openKv(":memory:"));
+ * ```
+ */
 export function relationKv(kv: Deno.Kv) {
   const atomic = kv.atomic.bind(kv);
   Object.defineProperties(kv, {

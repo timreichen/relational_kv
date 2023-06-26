@@ -24,7 +24,7 @@ await kv.relations.set(maths, lesson1);
 await kv.relations.set(maths, lesson2);
 
 await kv.relations.set(alice, maths, { mark: "C" });
-await kv.relations.set(alice, biology, { mark: "A+" });
+await kv.relations.set(alice, biology, { mark: "B" });
 
 await kv.relations.set(alice, lesson1, { status: "late" });
 await kv.relations.set(alice, lesson2, { status: "present" });
@@ -41,43 +41,66 @@ const composedStudent = await kv.composition.get(alice, {
     value: { lessons: { getMany: ["lessons"] } },
   },
 });
+
 console.log(composedStudent);
 /*
 {
-  name: "Alice",
-  classes: [
-    {
-      value: { name: "Biology", lessons: [] },
-      relation: { mark: "A+" }
-    },
-    {
-      value: {
-        name: "Maths",
-        lessons: [
-          { value: { date: "2023-01-01" }, relation: undefined },
-          { value: { date: "2023-01-08" }, relation: undefined }
-        ]
+  key: [ "students", "alice" ],
+  value: { name: "Alice" },
+  versionstamp: "00000000000000010000",
+  composition: {
+    classes: [
+      {
+        key: [ "classes", "biology" ],
+        value: { name: "Biology" },
+        versionstamp: "00000000000000040000",
+        composition: { lessons: [] },
+        relation: { mark: "B" }
       },
-      relation: { mark: "C" }
-    }
-  ]
+      {
+        key: [ "classes", "maths" ],
+        value: { name: "Maths" },
+        versionstamp: "00000000000000030000",
+        composition: { lessons: [Array] },
+        relation: { mark: "C" }
+      }
+    ]
+  }
 }
 */
 
 const composedLesson = await kv.composition.get(lesson1, {
-  classes: {
-    getMany: ["classes"],
-  },
+  classes: { getMany: ["classes"] },
   students: { getMany: ["students"] },
 });
 console.log(composedLesson);
 /*
 {
-  date: "2023-01-01",
-  classes: [ { value: { name: "Maths" }, relation: undefined } ],
-  students: [
-    { value: { name: "Alice" }, relation: { status: "late" } },
-    { value: { name: "Bob" }, relation: { status: "present" } }
-  ]
+  key: [ "lessons", "2023-01-01" ],
+  value: { date: "2023-01-01" },
+  versionstamp: "00000000000000050000",
+  composition: {
+    classes: [
+      {
+        key: [ "classes", "maths" ],
+        value: { name: "Maths" },
+        versionstamp: "00000000000000030000",
+      }
+    ],
+    students: [
+      {
+        key: [ "students", "alice" ],
+        value: { name: "Alice" },
+        versionstamp: "00000000000000010000",
+        relation: { status: "late" }
+      },
+      {
+        key: [ "students", "bob" ],
+        value: { name: "Bob" },
+        versionstamp: "00000000000000020000",
+        relation: { status: "present" }
+      }
+    ]
+  }
 }
 */

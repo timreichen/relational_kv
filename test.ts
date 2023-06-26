@@ -68,11 +68,25 @@ Deno.test("composition.get", async () => {
   });
 
   assertEquals(list, {
-    name: "vip",
-    guests: [
-      { value: "alice", relation: { number: 1 } },
-      { value: "bob", relation: { number: 2 } },
-    ],
+    composition: {
+      guests: [
+        {
+          key: ["guests", "alice"],
+          relation: { number: 1 },
+          value: "alice",
+          versionstamp: "00000000000000020000",
+        },
+        {
+          key: ["guests", "bob"],
+          relation: { number: 2 },
+          value: "bob",
+          versionstamp: "00000000000000030000",
+        },
+      ],
+    },
+    key: ["guestlists", "vip"],
+    value: { name: "vip" },
+    versionstamp: "00000000000000010000",
   });
 
   kv.close();
@@ -92,17 +106,34 @@ Deno.test("composition.get", async () => {
     number: 2,
   });
 
-  const generator =  kv.composition.list({ prefix: ["guestlists"] }, {
+  const generator = kv.composition.list({ prefix: ["guestlists"] }, {
     guests: { getMany: ["guests"] },
-  })
-
-  assertEquals((await generator.next()).value, {
-    name: "vip",
-    guests: [
-      { value: "alice", relation: { number: 1 } },
-      { value: "bob", relation: { number: 2 } },
-    ],
   });
+
+  assertEquals(
+    (await generator.next()).value,
+    {
+      composition: {
+        guests: [
+          {
+            key: ["guests", "alice"],
+            relation: { number: 1 },
+            value: "alice",
+            versionstamp: "00000000000000020000",
+          },
+          {
+            key: ["guests", "bob"],
+            relation: { number: 2 },
+            value: "bob",
+            versionstamp: "00000000000000030000",
+          },
+        ],
+      },
+      key: ["guestlists", "vip"],
+      value: { name: "vip" },
+      versionstamp: "00000000000000010000",
+    },
+  );
   assertEquals((await generator.next()).done, true);
 
   kv.close();
