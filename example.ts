@@ -93,12 +93,10 @@ console.log(composedLesson);
   versionstamp: "00000000000000050000",
   composition: {
     class: {
-      key: [ "classes", "biology" ],
-      value: { name: "Biology" },
-      versionstamp: "00000000000000040000",
-      composition: { lessons: [] },
-      relation: { mark: "B" }
-    }
+      key: [ "classes", "maths" ],
+      value: { name: "Maths" },
+      versionstamp: "00000000000000030000"
+    },
     students: [
       {
         key: [ "students", "alice" ],
