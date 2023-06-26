@@ -60,7 +60,20 @@ console.log(composedStudent);
         key: [ "classes", "maths" ],
         value: { name: "Maths" },
         versionstamp: "00000000000000030000",
-        composition: { lessons: [Array] },
+        composition: {
+          lessons: [
+            {
+              key: [ "lessons", "2023-01-01" ],
+              value: { date: "2023-01-01" },
+              versionstamp: "00000000000000050000"
+            },
+            {
+              key: [ "lessons", "2023-01-08" ],
+              value: { date: "2023-01-08" },
+              versionstamp: "00000000000000060000"
+            }
+          ]
+        },
         relation: { mark: "C" }
       }
     ]
