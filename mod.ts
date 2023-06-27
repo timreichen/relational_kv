@@ -1,9 +1,26 @@
+/**
+ * @module
+ *
+ * @example
+ * ```ts
+ * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
+ * const kv = await relationKv(await Deno.openKv());
+ * const alice = ["students", "alice"];
+ * const maths = ["classes", "maths"];
+ * await kv.set(alice, { name: "Alice" });
+ * await kv.set(maths, { name: "Maths" });
+ * await kv.relations.set(alice, maths, { mark: "A+" });
+ * const result = await kv.relations.get(alice, maths);
+ * result; // { mark: "A+" }
+ * ```
+ */
+
 export interface RelationKv extends Deno.Kv {
   relations: {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "./mod.ts";
+     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
      * const kv = await relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
@@ -20,7 +37,7 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "./mod.ts";
+     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
      * const kv = await relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
@@ -31,7 +48,7 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "./mod.ts";
+     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
      * const kv = await relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
@@ -48,7 +65,7 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "./mod.ts";
+     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
      * const kv = await relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
@@ -68,7 +85,7 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "./mod.ts";
+     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
      * const kv = await relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
@@ -210,8 +227,8 @@ async function compose<T>(
 /**
  * @example
  * ```ts
- * import { relationKv } from "./mod.ts";
- * const kv = await relationKv(await Deno.openKv(":memory:"));
+ * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
+ * const kv = await relationKv(await Deno.openKv());
  * ```
  */
 export function relationKv(kv: Deno.Kv) {
