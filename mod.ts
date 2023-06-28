@@ -273,25 +273,25 @@ export function relationKv(kv: Deno.Kv) {
     },
     atomic: {
       value() {
-        const result = atomic();
-        Object.defineProperty(result, "relations", {
+        const atomicOperation = atomic();
+        Object.defineProperty(atomicOperation, "relations", {
           value: {
             set<T>(
               leftKey: Deno.KvKey,
               rightKey: Deno.KvKey,
               value?: T,
             ) {
-              return setRelation(result, leftKey, rightKey, value);
+              return setRelation(atomicOperation, leftKey, rightKey, value);
             },
             delete(
               leftKey: Deno.KvKey,
               rightKey: Deno.KvKey,
             ) {
-              return deleteRelation(result, leftKey, rightKey);
+              return deleteRelation(atomicOperation, leftKey, rightKey);
             },
           },
         });
-        return result;
+        return atomicOperation;
       },
     },
   });
