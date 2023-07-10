@@ -1,8 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.192.0/testing/asserts.ts";
 
-import { relationKv } from "./mod.ts";
+import { RelationalKvEntry, relationKv } from "./mod.ts";
 
-Deno.test("relations.set", async () => {
+Deno.test("set relational data", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -17,7 +17,7 @@ Deno.test("relations.set", async () => {
 
   kv.close();
 });
-Deno.test("relations.delete", async () => {
+Deno.test("delete relational data", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -33,7 +33,7 @@ Deno.test("relations.delete", async () => {
 
   kv.close();
 });
-Deno.test("relations.get", async () => {
+Deno.test("get relational data", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -48,7 +48,7 @@ Deno.test("relations.get", async () => {
   kv.close();
 });
 
-Deno.test("composition.get", async () => {
+Deno.test("get relations", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["guestlists", "vip"], { name: "vip" });
@@ -63,12 +63,12 @@ Deno.test("composition.get", async () => {
     number: 2,
   });
 
-  const list = await kv.composition.get(["guestlists", "vip"], {
-    guests: { getMany: ["guests"] },
+  const entry = await kv.get(["guestlists", "vip"], {
+    relations: { guests: { getMany: ["guests"] } },
   });
 
-  assertEquals(list, {
-    composition: {
+  assertEquals(entry, {
+    relations: {
       guests: [
         {
           key: ["guests", "alice"],
@@ -91,7 +91,7 @@ Deno.test("composition.get", async () => {
 
   kv.close();
 });
-Deno.test("composition.get", async () => {
+Deno.test("list relations", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["guestlists", "vip"], { name: "vip" });
@@ -106,14 +106,15 @@ Deno.test("composition.get", async () => {
     number: 2,
   });
 
-  const generator = kv.composition.list({ prefix: ["guestlists"] }, {
-    guests: { getMany: ["guests"] },
-  });
+  const generator = kv.list(
+    { prefix: ["guestlists"] },
+    { relations: { guests: { getMany: ["guests"] } } },
+  );
 
   assertEquals(
-    (await generator.next()).value,
+    (await generator.next()).value as RelationalKvEntry<unknown>,
     {
-      composition: {
+      relations: {
         guests: [
           {
             key: ["guests", "alice"],
@@ -135,6 +136,51 @@ Deno.test("composition.get", async () => {
     },
   );
   assertEquals((await generator.next()).done, true);
+
+  kv.close();
+});
+Deno.test("atomic relations", async () => {
+  const kv = relationKv(await Deno.openKv(":memory:"));
+
+  await kv.atomic().set(["guestlists", "vip"], { name: "vip" })
+    .set(["guests", "alice"], "alice")
+    .set(["guests", "bob"], "bob")
+    .relations.set(["guestlists", "vip"], ["guests", "alice"], {
+      number: 1,
+    })
+    .relations.set(["guestlists", "vip"], ["guests", "bob"], {
+      number: 2,
+    })
+    .commit();
+
+  const entry = await kv.get(["guestlists", "vip"], {
+    relations: { guests: { getMany: ["guests"] } },
+  });
+
+  assertEquals(
+    entry,
+    {
+      relations: {
+        guests: [
+          {
+            key: ["guests", "alice"],
+            relation: { number: 1 },
+            value: "alice",
+            versionstamp: "00000000000000010000",
+          },
+          {
+            key: ["guests", "bob"],
+            relation: { number: 2 },
+            value: "bob",
+            versionstamp: "00000000000000010000",
+          },
+        ],
+      },
+      key: ["guestlists", "vip"],
+      value: { name: "vip" },
+      versionstamp: "00000000000000010000",
+    },
+  );
 
   kv.close();
 });

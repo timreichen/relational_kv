@@ -35,32 +35,34 @@ await kv.relations.set(bob, biology, { mark: "A+" });
 await kv.relations.set(bob, lesson1, { status: "present" });
 await kv.relations.set(bob, lesson2, { status: "absent" });
 
-const composedStudent = await kv.composition.get(alice, {
-  classes: {
-    getMany: ["classes"],
-    value: { lessons: { getMany: ["lessons"] } },
+const student = await kv.get(alice, {
+  relations: {
+    classes: {
+      getMany: ["classes"],
+      relations: { lessons: { getMany: ["lessons"] } },
+    },
   },
 });
-console.log(composedStudent);
+console.log(student);
 /*
 {
   key: [ "students", "alice" ],
   value: { name: "Alice" },
   versionstamp: "00000000000000010000",
-  composition: {
+  relations: {
     classes: [
       {
         key: [ "classes", "biology" ],
         value: { name: "Biology" },
         versionstamp: "00000000000000040000",
-        composition: { lessons: [] },
+        relations: { lessons: [] },
         relation: { mark: "B" }
       },
       {
         key: [ "classes", "maths" ],
         value: { name: "Maths" },
         versionstamp: "00000000000000030000",
-        composition: {
+        relations: {
           lessons: [
             {
               key: [ "lessons", "2023-01-01" ],
@@ -81,17 +83,19 @@ console.log(composedStudent);
 }
 */
 
-const composedLesson = await kv.composition.get(lesson1, {
-  class: { get: ["classes"] },
-  students: { getMany: ["students"] },
+const lesson = await kv.get(lesson1, {
+  relations: {
+    class: { get: ["classes"] },
+    students: { getMany: ["students"] },
+  },
 });
-console.log(composedLesson);
+console.log(lesson);
 /*
 {
   key: [ "lessons", "2023-01-01" ],
   value: { date: "2023-01-01" },
   versionstamp: "00000000000000050000",
-  composition: {
+  relations: {
     class: {
       key: [ "classes", "maths" ],
       value: { name: "Maths" },
