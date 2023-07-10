@@ -3,8 +3,8 @@
  *
  * @example
  * ```ts
- * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
- * const kv = await relationKv(await Deno.openKv());
+ * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+ * const kv = relationKv(await Deno.openKv());
  * const alice = ["students", "alice"];
  * const maths = ["classes", "maths"];
  * await kv.set(alice, { name: "Alice" });
@@ -13,6 +13,62 @@
  * const result = await kv.relations.get(alice, maths);
  * result; // { mark: "A+" }
  * ```
+ *
+ * @example
+ * ```ts
+ * import { relationKv } from "./mod.ts";
+ *
+ * const kv = relationKv(await Deno.openKv());
+ *
+ * const alice = ["students", "alice"];
+ * const bob = ["students", "bob"];
+ *
+ * const maths = ["classes", "maths"];
+ * const biology = ["classes", "biology"];
+ *
+ * const lesson1 = ["lessons", "2023-01-01"];
+ * const lesson2 = ["lessons", "2023-01-08"];
+ *
+ * await kv.set(alice, { name: "Alice" });
+ * await kv.set(bob, { name: "Bob" });
+ *
+ * await kv.set(maths, { name: "Maths" });
+ * await kv.set(biology, { name: "Biology" });
+ *
+ * await kv.set(lesson1, { date: "2023-01-01" });
+ * await kv.set(lesson2, { date: "2023-01-08" });
+ *
+ * await kv.relations.set(maths, lesson1);
+ * await kv.relations.set(maths, lesson2);
+ *
+ * await kv.relations.set(alice, maths, { mark: "C" });
+ * await kv.relations.set(alice, biology, { mark: "B" });
+ *
+ * await kv.relations.set(alice, lesson1, { status: "late" });
+ * await kv.relations.set(alice, lesson2, { status: "present" });
+ *
+ * await kv.relations.set(bob, maths, { mark: "F" });
+ * await kv.relations.set(bob, biology, { mark: "A+" });
+ *
+ * await kv.relations.set(bob, lesson1, { status: "present" });
+ * await kv.relations.set(bob, lesson2, { status: "absent" });
+ *
+ * const student = await kv.get(alice, {
+ *   relations: {
+ *     classes: {
+ *       getMany: ["classes"],
+ *       relations: { lessons: { getMany: ["lessons"] } },
+ *     },
+ *   },
+ * });
+ *
+ * const lesson = await kv.get(lesson1, {
+ *   relations: {
+ *     class: { get: ["classes"] },
+ *     students: { getMany: ["students"] },
+ *   },
+ * });
+ * ```
  */
 
 export interface RelationKv extends Deno.Kv {
@@ -20,8 +76,8 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
-     * const kv = await relationKv(await Deno.openKv());
+     * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+     * const kv = relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
      * await kv.set(alice, { name: "Alice" });
@@ -37,8 +93,8 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
-     * const kv = await relationKv(await Deno.openKv());
+     * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+     * const kv = relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
      * await kv.relations.delete(alice, maths);
@@ -48,8 +104,8 @@ export interface RelationKv extends Deno.Kv {
     /**
      * @example
      * ```ts
-     * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
-     * const kv = await relationKv(await Deno.openKv());
+     * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+     * const kv = relationKv(await Deno.openKv());
      * const alice = ["students", "alice"];
      * const maths = ["classes", "maths"];
      * await kv.set(alice, { name: "Alice" });
@@ -77,8 +133,8 @@ export interface RelationKv extends Deno.Kv {
   /**
    * @example
    * ```ts
-   * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
-   * const kv = await relationKv(await Deno.openKv());
+   * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+   * const kv = relationKv(await Deno.openKv());
    * const alice = ["students", "alice"];
    * const maths = ["classes", "maths"];
    * await kv.set(alice, { name: "Alice" });
@@ -122,16 +178,16 @@ export interface RelationAtomicOperation extends Deno.AtomicOperation {
 interface RelationsSelectorBase {
   relations?: RelationsSelector;
 }
-interface CompositionGetManySelector extends RelationsSelectorBase {
+interface RelationsGetManySelector extends RelationsSelectorBase {
   get?: never;
   getMany: Deno.KvKey;
 }
-interface CompositionGetSelector extends RelationsSelectorBase {
+interface RelationsGetSelector extends RelationsSelectorBase {
   get: Deno.KvKey;
   getMany?: never;
 }
 export interface RelationsSelector {
-  [K: string]: CompositionGetSelector | CompositionGetManySelector;
+  [K: string]: RelationsGetSelector | RelationsGetManySelector;
 }
 export interface RelationalKvEntry<T, C = unknown, R = never>
   extends Deno.KvEntry<T> {
@@ -220,8 +276,8 @@ async function compose<T>(
 /**
  * @example
  * ```ts
- * import { relationKv } from "https://raw.githubusercontent.com/timreichen/relational_deno_kv/main/mod.ts";
- * const kv = await relationKv(await Deno.openKv());
+ * import { relationKv } from "https://deno.land/x/relational_kv/mod.ts";
+ * const kv = relationKv(await Deno.openKv());
  * ```
  */
 export function relationKv(kv: Deno.Kv) {
