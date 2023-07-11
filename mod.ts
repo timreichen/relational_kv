@@ -282,10 +282,26 @@ async function compose<T>(
  */
 export function relationKv(kv: Deno.Kv) {
   const atomic = kv.atomic.bind(kv);
+  const _delete = kv.delete.bind(kv);
   const get = kv.get.bind(kv);
   const list = kv.list.bind(kv);
 
   Object.defineProperties(kv, {
+    delete: {
+      async value(key: Deno.KvKey) {
+        const result = await _delete(key);
+        for await (
+          const entry of list<RelationKvEntry<unknown>>({
+            prefix: [RELATION_KEY, ...key],
+          })
+        ) {
+          const atomic = kv.atomic();
+          await deleteRelation(atomic, key, entry.value.key)
+            .commit();
+        }
+        return result;
+      },
+    },
     get: {
       async value<T>(
         key: Deno.KvKey,
