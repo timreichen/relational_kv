@@ -2,7 +2,7 @@ import { assertEquals } from "https://deno.land/std@0.192.0/testing/asserts.ts";
 
 import { RelationalKvEntry, relationKv } from "./mod.ts";
 
-Deno.test("set relational data", async () => {
+Deno.test("kv.relations.set", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -17,7 +17,7 @@ Deno.test("set relational data", async () => {
 
   kv.close();
 });
-Deno.test("delete relational data", async () => {
+Deno.test("kv.relations.delete", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -33,7 +33,7 @@ Deno.test("delete relational data", async () => {
 
   kv.close();
 });
-Deno.test("get relational data", async () => {
+Deno.test("kv.relations.get", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["foo"], "foo");
@@ -48,7 +48,7 @@ Deno.test("get relational data", async () => {
   kv.close();
 });
 
-Deno.test("get relations", async () => {
+Deno.test("kv.get with options.relations", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["guestlists", "vip"], { name: "vip" });
@@ -91,7 +91,51 @@ Deno.test("get relations", async () => {
 
   kv.close();
 });
-Deno.test("list relations", async () => {
+Deno.test("kv.delete", async () => {
+  const kv = relationKv(await Deno.openKv(":memory:"));
+
+  await kv.set(["guestlists", "vip"], { name: "vip" });
+
+  await kv.set(["guests", "alice"], "alice");
+  await kv.set(["guests", "bob"], "bob");
+
+  await kv.relations.set(["guestlists", "vip"], ["guests", "alice"], {
+    number: 1,
+  });
+  await kv.relations.set(["guestlists", "vip"], ["guests", "bob"], {
+    number: 2,
+  });
+
+  await kv.delete(["guests", "alice"]);
+  const relationsEntry = await kv.relations.get(["guestlists", "vip"], [
+    "guests",
+    "alice",
+  ]);
+  assertEquals(relationsEntry, undefined);
+
+  const entry = await kv.get(["guestlists", "vip"], {
+    relations: { guests: { getMany: ["guests"] } },
+  });
+
+  assertEquals(entry, {
+    relations: {
+      guests: [
+        {
+          key: ["guests", "bob"],
+          relation: { number: 2 },
+          value: "bob",
+          versionstamp: "00000000000000030000",
+        },
+      ],
+    },
+    key: ["guestlists", "vip"],
+    value: { name: "vip" },
+    versionstamp: "00000000000000010000",
+  });
+
+  kv.close();
+});
+Deno.test("kv.list with options.relations", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.set(["guestlists", "vip"], { name: "vip" });
@@ -139,7 +183,7 @@ Deno.test("list relations", async () => {
 
   kv.close();
 });
-Deno.test("atomic relations", async () => {
+Deno.test("kv.atomic with kv.relations.set", async () => {
   const kv = relationKv(await Deno.openKv(":memory:"));
 
   await kv.atomic().set(["guestlists", "vip"], { name: "vip" })
